@@ -16,8 +16,6 @@ f = sys.argv[1]
 
 elements = pd.read_table(f)
 
-
-
 elements['meta_observed_CA_prop'] = elements.meta_observed_CA_neutral/elements.meta_observed_neutral
 elements['meta_observed_CG_prop'] = elements.meta_observed_CG_neutral/elements.meta_observed_neutral
 elements['meta_observed_CT_prop'] = elements.meta_observed_CT_neutral/elements.meta_observed_neutral
@@ -34,6 +32,8 @@ X = elements.loc[:, ['p_snp_phylop_lt_0', 'low_qual_prop_BRIDGE', 'low_qual_prop
     'ovary_H3K27me3', 'ovary_H3K9me3', 'ovary_H3K4me3', 'ovary_H3K4me1', \
     'ovary_H3K36me3', 'hESC_H3K27me3', 'hESC_H3K9me3', 'hESC_H3K4me3', \
     'hESC_H3K4me1', 'hESC_H3K36me3', 'hESC_H3K9ac', 'meta_observed_neutral']]
+
+X.dropna(axis=0,inplace=True)
 
 y = X['meta_observed_neutral']
 X.drop('meta_observed_neutral', axis = 1, inplace=True)
