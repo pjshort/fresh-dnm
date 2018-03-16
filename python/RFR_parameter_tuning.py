@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.ensemble import RandomForestRegressor
+import sys
+
 
 __author__ = 'patrick short'
 
@@ -10,7 +12,11 @@ __author__ = 'patrick short'
 # annotated with p_snp_phylop_lt_0 (triplet mutability in neutral sites)
 # annotated with any number of genomic features
 
-elements = pd.read_table("./whole_genome_sliding.10kb_bins.mut_rates.reduced_annotation.coverage_added.constraint.txt")
+f = sys.argv[1]
+
+elements = pd.read_table(f)
+
+
 
 elements['meta_observed_CA_prop'] = elements.meta_observed_CA_neutral/elements.meta_observed_neutral
 elements['meta_observed_CG_prop'] = elements.meta_observed_CG_neutral/elements.meta_observed_neutral
@@ -68,3 +74,4 @@ rf_random = RandomizedSearchCV(estimator = rf, param_distributions = random_grid
 rf_random.fit(X, y)
 
 print('The best set of features in the randomised search was:')
+print(rf_random.best_params_)
