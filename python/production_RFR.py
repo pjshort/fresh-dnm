@@ -16,6 +16,8 @@ elements['meta_observed_TA_prop'] = elements.meta_observed_TA_neutral/elements.m
 elements['meta_observed_TC_prop'] = elements.meta_observed_TC_neutral/elements.meta_observed_neutral
 elements['meta_observed_TG_prop'] = elements.meta_observed_TG_neutral/elements.meta_observed_neutral
 
+elements.arm = elements.arm.astype('category')
+
 elements.dropna(axis = 0, inplace = True)
 
 print(elements.shape)
