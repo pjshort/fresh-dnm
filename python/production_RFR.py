@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+import sys
 
 f = sys.argv[1]
 
@@ -16,6 +17,8 @@ elements['meta_observed_TC_prop'] = elements.meta_observed_TC_neutral/elements.m
 elements['meta_observed_TG_prop'] = elements.meta_observed_TG_neutral/elements.meta_observed_neutral
 
 elements.dropna(axis = 0, inplace = True)
+
+print(elements.shape)
 
 X = elements.loc[:, ['p_snp_phylop_lt_0', 'low_qual_prop_BRIDGE', 'low_qual_prop_gnomad', 'median_coverage_BRIDGE', 'median_coverage_gnomad', \
                      'chr', 'telomere_dist', 'arm', \
@@ -34,9 +37,6 @@ y = X['meta_observed_neutral']
 X.drop('meta_observed_neutral', axis = 1, inplace=True)
 LR.fit(X['p_snp_phylop_lt_0'].values.reshape(-1,1), y)
 
-y_prop =  y/LR.predict(X['p_snp_phylop_lt_0'].values.reshape(-1,1))
-X.drop('p_snp_phylop_lt_0', axis = 1, inplace=True)
-
 
 def obs_exp_z_score(observed, expected):
     return (observed - expected)/np.sqrt(expected)
@@ -45,6 +45,8 @@ elements['meta_predicted_neutral_triplet_only'] = LR.predict(X['p_snp_phylop_lt_
 elements['meta_obs_exp_ratio_neutral_triplet_only'] = elements.meta_observed_neutral/elements['meta_predicted_neutral_triplet_only']
 elements['meta_z_score_neutral_triplet_only'] = obs_exp_z_score(elements.meta_observed_neutral, elements.meta_predicted_neutral_triplet_only)
 
+y_prop = y/LR.predict(X['p_snp_phylop_lt_0'].values.reshape(-1,1))
+X.drop('p_snp_phylop_lt_0', axis = 1, inplace=True)
 
 ### RFR including just the technical features
 
