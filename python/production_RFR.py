@@ -6,6 +6,8 @@ from sklearn.model_selection import train_test_split
 import sys
 
 from sklearn.externals import joblib
+from sklearn.preprocessing import Imputer
+
 
 f = sys.argv[1]
 
@@ -24,22 +26,14 @@ elements['meta_observed_TG_prop'] = elements.meta_observed_TG_neutral/elements.m
 elements.arm[elements.arm == 'p'] = 1
 elements.arm[elements.arm == 'q'] = 2
 
-elements.dropna(axis = 0, inplace = True)
-
-print(elements.shape)
+#elements.dropna(axis = 0, inplace = True)
 
 scores = []
 
-X = elements.loc[:, ['p_snp_phylop_lt_0', 'low_qual_prop_BRIDGE', 'low_qual_prop_gnomad', 'median_coverage_BRIDGE', 'median_coverage_gnomad', \
-                     'chr', 'telomere_dist', 'arm', \
-             'GC_content', 'low_complexity_regions','meta_observed_CA_prop', 'meta_observed_CT_prop', 'meta_observed_CG_prop', \
-             'meta_observed_TA_prop','meta_observed_TC_prop','meta_observed_TG_prop', \
-             'replication_timing_Koren_LCLs', 'replication_timing_DingKoren_ESCs', \
-             'recombination_rate_kong_female','recombination_rate_kong_male', 'recombination_rate_1000G_phase3', \
-                     'ovary_DNase', 'hSSC_ATAC', 'hESC_ATAC', 'ovary_H3K27ac', \
-'ovary_H3K27me3', 'ovary_H3K9me3', 'ovary_H3K4me3', 'ovary_H3K4me1', \
-'ovary_H3K36me3', 'hESC_H3K27me3', 'hESC_H3K9me3', 'hESC_H3K4me3', \
-'hESC_H3K4me1', 'hESC_H3K36me3', 'hESC_H3K9ac', 'meta_observed_neutral']]
+X = elements.loc[:, ['p_snp_phylop_lt_0', 'meta_observed_neutral']]
+
+imp = Imputer(strategy='median')
+X = pd.DataFrame(imp.fit_transform(X), columns=X.columns)
 
 # fit the linear regression
 LR = LinearRegression()
@@ -57,6 +51,7 @@ elements['meta_predicted_neutral_triplet_only'] = LR.predict(X['p_snp_phylop_lt_
 elements['meta_obs_exp_ratio_neutral_triplet_only'] = elements.meta_observed_neutral/elements['meta_predicted_neutral_triplet_only']
 elements['meta_z_score_neutral_triplet_only'] = obs_exp_z_score(elements.meta_observed_neutral, elements.meta_predicted_neutral_triplet_only)
 
+y_triplet = LR.predict(X['p_snp_phylop_lt_0'].values.reshape(-1,1))
 y_prop = y/LR.predict(X['p_snp_phylop_lt_0'].values.reshape(-1,1))
 X.drop('p_snp_phylop_lt_0', axis = 1, inplace=True)
 
@@ -64,11 +59,14 @@ X.drop('p_snp_phylop_lt_0', axis = 1, inplace=True)
 
 X = elements.loc[:, ['p_snp_phylop_lt_0', 'low_qual_prop_BRIDGE', 'low_qual_prop_gnomad', 'median_coverage_BRIDGE', 'median_coverage_gnomad']]
 
+imp = Imputer(strategy='median')
+X = pd.DataFrame(imp.fit_transform(X), columns=X.columns)
+
 RFR = RandomForestRegressor(n_estimators = 2000, max_depth = 100, max_features = int(np.round(X.shape[1]/2)), min_samples_leaf = 10, min_samples_split = 20, n_jobs=-1, verbose = 4)
 X_train, X_test, y_train, y_test = train_test_split(X, y_prop, random_state=42)
 RFR.fit(X_train, y_train)
 
-elements['meta_predicted_neutral_RFR_technical'] = RFR.predict(X)
+elements['meta_predicted_neutral_RFR_technical'] = RFR.predict(X) * y_triplet
 elements['meta_obs_exp_ratio_neutral_RFR_technical'] = elements.meta_observed_neutral/elements['meta_predicted_neutral_RFR_technical']
 elements['meta_z_score_neutral_RFR_technical'] = obs_exp_z_score(elements.meta_observed_neutral, elements.meta_predicted_neutral_RFR_technical)
 
@@ -87,12 +85,14 @@ X = elements.loc[:, ['p_snp_phylop_lt_0', 'low_qual_prop_BRIDGE', 'low_qual_prop
 'ovary_H3K36me3', 'hESC_H3K27me3', 'hESC_H3K9me3', 'hESC_H3K4me3', \
 'hESC_H3K4me1', 'hESC_H3K36me3', 'hESC_H3K9ac']]
 
+imp = Imputer(strategy='median')
+X = pd.DataFrame(imp.fit_transform(X), columns=X.columns)
 
 RFR = RandomForestRegressor(n_estimators = 2000, max_depth = 100, max_features = int(np.round(X.shape[1]/2)), min_samples_leaf = 10, min_samples_split = 20, n_jobs=-1, verbose = 4)
 X_train, X_test, y_train, y_test = train_test_split(X, y_prop, random_state=42)
 RFR.fit(X_train, y_train)
 
-elements['meta_predicted_neutral_RFR_genomic'] = RFR.predict(X)
+elements['meta_predicted_neutral_RFR_genomic'] = RFR.predict(X) * y_triplet
 elements['meta_obs_exp_ratio_neutral_RFR_genomic'] = elements.meta_observed_neutral/elements['meta_predicted_neutral_RFR_genomic']
 elements['meta_z_score_neutral_RFR_genomic'] = obs_exp_z_score(elements.meta_observed_neutral, elements.meta_predicted_neutral_RFR_genomic)
 
@@ -113,14 +113,18 @@ X = elements.loc[:, ['p_snp_phylop_lt_0', 'low_qual_prop_BRIDGE', 'low_qual_prop
 'ovary_H3K36me3', 'hESC_H3K27me3', 'hESC_H3K9me3', 'hESC_H3K4me3', \
 'hESC_H3K4me1', 'hESC_H3K36me3', 'hESC_H3K9ac']]
 
+
 chr_dummies = pd.get_dummies(elements.chr)
 X = X.join(chr_dummies)
+
+imp = Imputer(strategy='median')
+X = pd.DataFrame(imp.fit_transform(X), columns=X.columns)
 
 RFR = RandomForestRegressor(n_estimators = 2000, max_depth = 100, max_features = int(np.round(X.shape[1]/2)), min_samples_leaf = 10, min_samples_split = 20, n_jobs=-1, verbose = 4)
 X_train, X_test, y_train, y_test = train_test_split(X, y_prop, random_state=42)
 RFR.fit(X_train, y_train)
 
-elements['meta_predicted_neutral_RFR_full'] = RFR.predict(X)
+elements['meta_predicted_neutral_RFR_full'] = RFR.predict(X) * y_triplet
 elements['meta_obs_exp_ratio_neutral_RFR_full'] = elements.meta_observed_neutral/elements['meta_predicted_neutral_RFR_full']
 elements['meta_z_score_neutral_RFR_full'] = obs_exp_z_score(elements.meta_observed_neutral, elements.meta_predicted_neutral_RFR_full)
 
